@@ -1,0 +1,937 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>IQMogged — Intelligence Battles</title>
+<style>
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --bg:#06060f;--surface:#0e0e1d;--surface2:#161628;
+  --border:rgba(110,110,255,0.1);--border2:rgba(110,110,255,0.22);
+  --purple:#7c3aed;--purple-light:#a855f7;--cyan:#06b6d4;
+  --green:#10b981;--red:#ef4444;--gold:#f59e0b;
+  --text:#f0f0ff;--muted:#8080aa;
+}
+body{background:var(--bg);color:var(--text);font-family:-apple-system,'Segoe UI',system-ui,sans-serif;min-height:100vh;overflow-x:hidden}
+body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellipse 70% 50% at 15% 15%,rgba(124,58,237,.09) 0%,transparent 60%),radial-gradient(ellipse 55% 40% at 85% 85%,rgba(6,182,212,.07) 0%,transparent 60%);pointer-events:none;z-index:0}
+
+/* SCREENS */
+.screen{display:none;min-height:100vh;position:relative;z-index:1;flex-direction:column}
+.screen.active{display:flex}
+
+/* TYPOGRAPHY */
+.logo-xl{font-size:clamp(2.5rem,8vw,4rem);font-weight:900;letter-spacing:-.03em;background:linear-gradient(135deg,#a855f7 0%,#06b6d4 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.logo-sm{font-size:1.4rem;font-weight:900;letter-spacing:-.02em;background:linear-gradient(135deg,#a855f7,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+
+/* BUTTONS */
+.btn{padding:13px 28px;border-radius:12px;border:none;cursor:pointer;font-size:.95rem;font-weight:700;letter-spacing:.06em;text-transform:uppercase;transition:all .18s;font-family:inherit}
+.btn-primary{background:linear-gradient(135deg,var(--purple),var(--purple-light));color:#fff;box-shadow:0 4px 22px rgba(124,58,237,.38)}
+.btn-primary:hover{transform:translateY(-2px);box-shadow:0 8px 30px rgba(124,58,237,.55)}
+.btn-primary:active{transform:translateY(0)}
+.btn-secondary{background:var(--surface2);color:var(--muted);border:1px solid var(--border)}
+.btn-secondary:hover{border-color:var(--border2);color:var(--text)}
+.btn-ghost{background:transparent;color:var(--muted);border:1px solid var(--border);padding:9px 18px;font-size:.82rem}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn:disabled{opacity:.5;cursor:default;transform:none!important}
+
+/* RANK BADGE */
+.rbadge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:.72rem;font-weight:800;letter-spacing:.04em}
+
+/* ═══════════════════ BG FLOATS ═══════════════════ */
+.yt-bg{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}
+.yt-bg video{position:absolute;top:50%;left:50%;width:177.78vh;min-width:100%;height:56.25vw;min-height:100%;transform:translate(-50%,-50%);object-fit:cover;filter:saturate(1.4) brightness(.85);transition:opacity 1s ease;opacity:0}
+.yt-bg video.bg-active{opacity:.13}
+.bg-floats{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:1}
+.bgf{position:absolute;user-select:none;line-height:1;animation:bgDrift ease-in-out infinite}
+@keyframes bgDrift{
+  0%  {transform:translateY(0px) rotate(0deg) scale(1)}
+  25% {transform:translateY(-18px) rotate(4deg) scale(1.03)}
+  50% {transform:translateY(-8px) rotate(-2deg) scale(.97)}
+  75% {transform:translateY(-24px) rotate(6deg) scale(1.02)}
+  100%{transform:translateY(0px) rotate(0deg) scale(1)}
+}
+@keyframes bgDrift2{
+  0%  {transform:translateY(0px) rotate(0deg)}
+  30% {transform:translateY(14px) rotate(-5deg)}
+  60% {transform:translateY(-12px) rotate(3deg)}
+  100%{transform:translateY(0px) rotate(0deg)}
+}
+@keyframes bgDrift3{
+  0%  {transform:translateY(0px) translateX(0px) rotate(0deg)}
+  25% {transform:translateY(-10px) translateX(8px) rotate(3deg)}
+  50% {transform:translateY(-20px) translateX(-5px) rotate(-4deg)}
+  75% {transform:translateY(-5px) translateX(10px) rotate(5deg)}
+  100%{transform:translateY(0px) translateX(0px) rotate(0deg)}
+}
+
+/* ═══════════════════ HOME ═══════════════════ */
+.home-nav{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:rgba(6,6,15,.85);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);z-index:100}
+.nav-right{display:flex;align-items:center;gap:10px}
+.nav-iq{font-size:.85rem;color:var(--muted)}
+.nav-iq span{color:var(--cyan);font-weight:800}
+.bg-toggle{display:flex;align-items:center;border-radius:20px;overflow:hidden;border:1px solid var(--border2);height:28px}
+.bg-toggle button{border:none;cursor:pointer;width:28px;height:28px;font-size:.6rem;font-weight:900;letter-spacing:.04em;transition:all .18s;font-family:inherit;line-height:1}
+.bg-toggle .bgt-dark{background:#111;color:#fff}
+.bg-toggle .bgt-light{background:#f5f5f5;color:#111}
+.bg-toggle button.bgt-active{outline:2px solid var(--purple-light);outline-offset:-2px;transform:scale(1.08);z-index:1;position:relative}
+body.theme-light{--bg:#f0f0f5;--surface:#e2e2ec;--surface2:#d4d4e0;--border:rgba(100,100,180,0.18);--border2:rgba(100,100,180,0.35);--text:#111122;--muted:#555577}
+body.theme-light::before{background:radial-gradient(ellipse 70% 50% at 15% 15%,rgba(124,58,237,.06) 0%,transparent 60%),radial-gradient(ellipse 55% 40% at 85% 85%,rgba(6,182,212,.05) 0%,transparent 60%)}
+
+.home-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:18px;padding:100px 24px 40px;position:relative;z-index:1}
+.tagline{font-size:1rem;color:var(--muted);max-width:360px;line-height:1.5}
+.stats-row{display:flex;gap:32px;margin:8px 0}
+.stat-box .val{font-size:1.6rem;font-weight:900;color:var(--purple-light)}
+.stat-box .lbl{font-size:.7rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.home-btns{display:flex;flex-direction:column;gap:10px;width:100%;max-width:260px;margin-top:8px}
+.home-btns .btn-primary{padding:17px 28px;font-size:1.05rem}
+
+/* ═══════════════════ MODES ═══════════════════ */
+.modes-header{display:flex;align-items:center;gap:14px;padding:22px 22px 0}
+.modes-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:22px;flex:1}
+.mode-card{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:24px;cursor:pointer;transition:all .2s;display:flex;flex-direction:column;gap:10px}
+.mode-card:hover{transform:translateY(-4px)}
+.mode-card.casual:hover{border-color:#06b6d4;box-shadow:0 8px 30px rgba(6,182,212,.2)}
+.mode-card.speed:hover{border-color:#f59e0b;box-shadow:0 8px 30px rgba(245,158,11,.2)}
+.mode-card.celeb:hover{border-color:#ec4899;box-shadow:0 8px 30px rgba(236,72,153,.2)}
+.mode-card.ranked:hover{border-color:var(--purple);box-shadow:0 8px 30px rgba(124,58,237,.3)}
+.mode-icon{font-size:2.2rem}
+.mode-name{font-size:1.15rem;font-weight:800}
+.mode-desc{font-size:.82rem;color:var(--muted);line-height:1.5}
+.mode-tag{display:inline-flex;padding:3px 9px;border-radius:20px;font-size:.65rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;align-self:flex-start}
+
+/* ═══════════════════ MATCHMAKING ═══════════════════ */
+#screen-mm{align-items:center;justify-content:center;gap:28px;padding:24px}
+.search-ring{width:88px;height:88px;border-radius:50%;border:3px solid var(--border);border-top-color:var(--purple);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.vs-row{display:flex;align-items:center;gap:16px;width:100%;max-width:480px}
+.mm-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center}
+.vs-label{font-size:1.4rem;font-weight:900;color:var(--muted);flex-shrink:0}
+
+/* ═══════════════════ LOBBY ═══════════════════ */
+#screen-lobby{align-items:center;justify-content:center;padding:24px;gap:24px}
+.lobby-players{display:flex;align-items:center;gap:16px;width:100%;max-width:460px}
+.lp-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:22px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;transition:all .3s}
+.lp-card.ready{border-color:var(--green);background:rgba(16,185,129,.07)}
+.avatar{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.6rem;background:var(--surface2);border:2px solid var(--border)}
+.vs-big{font-size:2rem;font-weight:900;color:var(--muted);flex-shrink:0}
+.ready-status{font-size:.78rem;font-weight:700}
+
+/* ═══════════════════ COUNTDOWN ═══════════════════ */
+#screen-countdown{align-items:center;justify-content:center;gap:12px}
+.count-label{font-size:.9rem;color:var(--muted);letter-spacing:.12em;text-transform:uppercase}
+.count-num{font-size:9rem;font-weight:900;line-height:1;background:linear-gradient(135deg,var(--purple-light),var(--cyan));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;animation:countPop .85s cubic-bezier(.34,1.56,.64,1) forwards}
+@keyframes countPop{0%{transform:scale(2.2);opacity:0}50%{transform:scale(1);opacity:1}80%{transform:scale(1);opacity:1}100%{transform:scale(.4);opacity:0}}
+
+/* ═══════════════════ BATTLE ═══════════════════ */
+#screen-battle{padding:0;flex-direction:column}
+.timer-wrap{height:6px;background:var(--surface2);flex-shrink:0}
+.timer-fill{height:100%;background:linear-gradient(90deg,var(--purple),var(--cyan));transition:width .1s linear;box-shadow:0 0 8px rgba(124,58,237,.5)}
+
+/* Question header — top of screen */
+.battle-top{padding:18px 20px 14px;border-bottom:2px solid var(--border);flex-shrink:0}
+.q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.q-num{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.timer-display{font-size:2.5rem;font-weight:900;color:var(--purple-light);line-height:1}
+.timer-display.urgent{color:var(--red);animation:tUrgent .45s ease infinite alternate}
+@keyframes tUrgent{from{transform:scale(1)}to{transform:scale(1.12)}}
+.opp-indicator{display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--muted);display:none;margin-bottom:6px}
+.opp-dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.q-text{font-size:1.4rem;font-weight:800;line-height:1.45;color:var(--text)}
+
+/* Bottom row — cams left, answers right */
+.battle-bottom{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0}
+.cams-col{display:flex;flex-direction:column;border-right:2px solid var(--border)}
+.cam{position:relative;overflow:hidden;background:var(--surface);flex:1}
+.cam:first-child{border-bottom:2px solid var(--border);box-shadow:inset 0 0 40px rgba(124,58,237,.08)}
+.cam:last-child{box-shadow:inset 0 0 40px rgba(6,182,212,.06)}
+video.cam-video{width:100%;height:100%;object-fit:cover;display:none}
+.cam-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;background:linear-gradient(135deg,var(--surface),var(--surface2))}
+.cam-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(6,6,15,.95));padding:10px 12px 8px;display:flex;align-items:flex-end;justify-content:space-between}
+.cam-name{font-size:.85rem;font-weight:800;letter-spacing:.02em}
+.cam-score{font-size:1.8rem;font-weight:900;line-height:1}
+.rank-pin{position:absolute;top:8px;left:8px;padding:4px 8px;border-radius:8px;font-size:.68rem;font-weight:800;letter-spacing:.04em}
+.streak-pin{position:absolute;top:8px;right:8px;background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:4px 8px;border-radius:8px;font-size:.72rem;font-weight:900;animation:sPulse .55s ease infinite alternate;display:none}
+@keyframes sPulse{from{transform:scale(1)}to{transform:scale(1.06);box-shadow:0 0 12px rgba(245,158,11,.6)}}
+.opp-flash{animation:flash .4s ease}
+@keyframes flash{0%,100%{opacity:1}50%{opacity:.3}}
+
+.answers-col{padding:18px 16px;display:flex;flex-direction:column;justify-content:center;gap:11px}
+.answers{display:flex;flex-direction:column;gap:11px}
+.ans-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:16px 14px;color:var(--text);font-size:.95rem;font-weight:700;cursor:pointer;transition:all .15s;text-align:left;line-height:1.35;font-family:inherit}
+.ans-btn:hover:not(:disabled){border-color:var(--purple);background:rgba(124,58,237,.1)}
+.ans-btn.correct{border-color:var(--green)!important;background:rgba(16,185,129,.14)!important;color:#6ee7b7}
+.ans-btn.wrong{border-color:var(--red)!important;background:rgba(239,68,68,.14)!important;color:#fca5a5}
+.ans-btn:disabled{cursor:default}
+
+/* ═══════════════════ RESULTS ═══════════════════ */
+#screen-results{align-items:center;justify-content:center;padding:24px;gap:20px}
+.result-title{font-size:3rem;font-weight:900;letter-spacing:-.02em}
+.result-title.win{background:linear-gradient(135deg,#10b981,#06b6d4);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.result-title.loss{background:linear-gradient(135deg,#ef4444,#f59e0b);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.result-title.tie{color:var(--gold)}
+.result-sub{color:var(--muted);font-size:.95rem;margin-top:4px;text-align:center}
+.rankup{background:linear-gradient(135deg,var(--purple),var(--cyan));border-radius:14px;padding:16px 28px;text-align:center;font-weight:900;font-size:1.15rem;animation:rPop .5s cubic-bezier(.34,1.56,.64,1);display:none}
+@keyframes rPop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
+.score-card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;width:100%;max-width:380px}
+.sc-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:.9rem}
+.sc-row:last-child{border-bottom:none}
+.sc-label{color:var(--muted)}
+.iq-pos{color:var(--green);font-weight:900;font-size:1.15rem}
+.iq-neg{color:var(--red);font-weight:900;font-size:1.15rem}
+.res-btns{display:flex;gap:10px;width:100%;max-width:380px}
+.res-btns .btn{flex:1}
+
+/* ═══════════════════ RANKS ═══════════════════ */
+#screen-ranks{padding:22px;gap:18px}
+.ranks-header{display:flex;align-items:center;gap:14px}
+.your-rank-box{text-align:center;padding:16px;background:var(--surface);border-radius:12px;border:1px solid var(--border)}
+.rank-list{display:flex;flex-direction:column;gap:7px}
+.rank-row{display:flex;align-items:center;gap:14px;padding:13px 18px;background:var(--surface);border:1px solid var(--border);border-radius:12px;transition:all .2s}
+.rank-row.current{border-color:var(--purple);background:rgba(124,58,237,.1)}
+.rank-row .ri{font-size:1.4rem;width:28px;text-align:center}
+.rank-row .rinfo{flex:1}
+.rank-row .rname{font-weight:700;font-size:.9rem}
+.rank-row .rrange{font-size:.72rem;color:var(--muted)}
+.rprog-wrap{width:72px}
+.rprog-pct{font-size:.68rem;color:var(--muted);text-align:right;margin-bottom:3px}
+.rprog{height:4px;background:var(--surface2);border-radius:2px;overflow:hidden}
+.rprog-fill{height:100%;border-radius:2px;transition:width .6s}
+.you-tag{font-size:.68rem;color:var(--purple-light);font-weight:800;margin-left:6px}
+
+/* UTILITY */
+.fade-in{animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.hidden{display:none!important}
+h1{font-size:1.4rem;font-weight:900}
+</style>
+</head>
+<body>
+
+<!-- ═══ HOME ═══ -->
+<div id="screen-home" class="screen active">
+
+  <!-- Local video background -->
+  <div class="yt-bg">
+    <video id="bgv0" autoplay muted loop playsinline class="bg-active"><source src="BG.mp4.mp4" type="video/mp4"></video>
+    <video id="bgv1" autoplay muted loop playsinline><source src="Typing Code.mp4" type="video/mp4"></video>
+  </div>
+
+
+  <nav class="home-nav">
+    <div class="logo-sm">IQMogged</div>
+    <div class="nav-right">
+      <div class="nav-iq">IQ: <span id="nav-iq">1000</span></div>
+      <div id="nav-rank"></div>
+      <div class="bg-toggle">
+        <button class="bgt-dark bgt-active" id="bgt-dark" onclick="setBgTheme('dark')" title="Dark background">B</button>
+        <button class="bgt-light" id="bgt-light" onclick="setBgTheme('light')" title="Light background">W</button>
+      </div>
+    </div>
+  </nav>
+  <div class="home-hero fade-in">
+    <div class="logo-xl">IQMogged</div>
+    <div class="tagline">Live intelligence battles. Step in, compete, and prove you're smarter.</div>
+    <div id="home-rank" style="margin:4px 0"></div>
+    <div class="stats-row">
+      <div class="stat-box"><div class="val" id="s-wins">0</div><div class="lbl">Wins</div></div>
+      <div class="stat-box"><div class="val" id="s-losses">0</div><div class="lbl">Losses</div></div>
+      <div class="stat-box"><div class="val" id="s-streak">0</div><div class="lbl">Streak</div></div>
+    </div>
+    <div class="home-btns">
+      <button class="btn btn-primary" onclick="nav('modes')">⚡ PLAY NOW</button>
+      <button class="btn btn-secondary" onclick="nav('ranks')">🏆 View Rank Ladder</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MODES ═══ -->
+<div id="screen-modes" class="screen">
+  <div class="modes-header">
+    <button class="btn btn-ghost" onclick="nav('home')">← Back</button>
+    <h1>Select Mode</h1>
+  </div>
+  <div class="modes-grid">
+    <div class="mode-card casual" onclick="startMode('casual')">
+      <div class="mode-icon">🧠</div>
+      <div class="mode-name">Casual Trivia</div>
+      <div class="mode-desc">Classic Q&amp;A battle. 15 seconds per question. General knowledge.</div>
+      <div class="mode-tag" style="background:rgba(6,182,212,.15);color:#06b6d4">CASUAL</div>
+    </div>
+    <div class="mode-card celeb" onclick="startMode('iqmog')">
+      <div class="mode-icon">🧠</div>
+      <div class="mode-name">IQ MOG Mode</div>
+      <div class="mode-desc">Skincare, jawlines, aesthetics, and the looksmaxx grind. Do you know your stuff?</div>
+      <div class="mode-tag" style="background:rgba(168,85,247,.15);color:#a855f7">LOOKSMAXX</div>
+    </div>
+    <div class="mode-card speed" onclick="startMode('speed')">
+      <div class="mode-icon">⚡</div>
+      <div class="mode-name">Speed Round</div>
+      <div class="mode-desc">8 seconds to answer. Pure speed plus accuracy creates real pressure.</div>
+      <div class="mode-tag" style="background:rgba(245,158,11,.15);color:#f59e0b">FAST PACED</div>
+    </div>
+    <div class="mode-card ranked" onclick="startMode('ranked')">
+      <div class="mode-icon">🏆</div>
+      <div class="mode-name">Ranked Mode</div>
+      <div class="mode-desc">Your rank is on the line. High school to college level. More IQ at stake.</div>
+      <div class="mode-tag" style="background:rgba(124,58,237,.2);color:#a855f7">COMPETITIVE</div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ MATCHMAKING ═══ -->
+<div id="screen-mm" class="screen">
+  <div id="mm-status" style="font-size:1.05rem;color:var(--muted);text-align:center">Searching for opponent…</div>
+  <div id="mm-spin"><div class="search-ring"></div></div>
+  <div class="vs-row hidden" id="mm-found">
+    <div class="mm-card fade-in">
+      <div style="font-size:2rem">😎</div>
+      <div style="font-weight:800;font-size:.9rem">You</div>
+      <div id="mm-you-rank"></div>
+      <div style="font-size:.78rem;color:var(--muted)" id="mm-you-iq"></div>
+    </div>
+    <div class="vs-label">VS</div>
+    <div class="mm-card fade-in">
+      <div style="font-size:2rem" id="mm-opp-av">🤖</div>
+      <div style="font-weight:800;font-size:.9rem" id="mm-opp-name">Finding…</div>
+      <div id="mm-opp-rank"></div>
+      <div style="font-size:.78rem;color:var(--muted)" id="mm-opp-iq"></div>
+    </div>
+  </div>
+  <button class="btn btn-ghost" onclick="nav('modes')">Cancel</button>
+</div>
+
+<!-- ═══ LOBBY ═══ -->
+<div id="screen-lobby" class="screen">
+  <div style="text-align:center;padding-top:40px">
+    <div class="logo-sm" style="margin-bottom:6px">IQMogged</div>
+    <div style="font-size:1.4rem;font-weight:900" id="lobby-mode">Casual Trivia</div>
+    <div style="color:var(--muted);font-size:.82rem;margin-top:4px">10 Questions · Best of 10</div>
+  </div>
+  <div class="lobby-players">
+    <div class="lp-card" id="lp-you">
+      <div class="avatar">😎</div>
+      <div style="font-weight:800">You</div>
+      <div id="lp-you-rank"></div>
+      <div style="font-size:.78rem;color:var(--muted)" id="lp-you-iq"></div>
+      <div class="ready-status" id="lp-you-status" style="color:var(--muted)">Not Ready</div>
+    </div>
+    <div class="vs-big">VS</div>
+    <div class="lp-card" id="lp-opp">
+      <div class="avatar" id="lp-opp-av">🤖</div>
+      <div style="font-weight:800" id="lp-opp-name">Opponent</div>
+      <div id="lp-opp-rank"></div>
+      <div style="font-size:.78rem;color:var(--muted)" id="lp-opp-iq"></div>
+      <div class="ready-status" style="color:var(--green)">Ready ✓</div>
+    </div>
+  </div>
+  <button class="btn btn-primary" style="padding:16px 52px;font-size:1.05rem" id="ready-btn" onclick="playerReady()">READY UP</button>
+  <button class="btn btn-ghost" onclick="nav('modes')" style="margin-top:-8px">Leave Lobby</button>
+</div>
+
+<!-- ═══ COUNTDOWN ═══ -->
+<div id="screen-countdown" class="screen">
+  <div class="count-label">Battle starting in</div>
+  <div class="count-num" id="count-num">3</div>
+</div>
+
+<!-- ═══ BATTLE ═══ -->
+<div id="screen-battle" class="screen">
+  <div class="timer-wrap"><div class="timer-fill" id="t-bar" style="width:100%"></div></div>
+
+  <!-- Question on top -->
+  <div class="battle-top">
+    <div class="q-header">
+      <div class="q-num" id="q-num">Question 1 of 10</div>
+      <div class="timer-display" id="t-display">15</div>
+    </div>
+    <div class="opp-indicator" id="opp-ind">
+      <div class="opp-dot"></div>
+      <span id="opp-ind-name">Opponent</span> has answered
+    </div>
+    <div class="q-text" id="q-text">Loading…</div>
+  </div>
+
+  <!-- Cams left, answers right -->
+  <div class="battle-bottom">
+    <div class="cams-col">
+      <!-- YOU -->
+      <div class="cam" id="cam-you">
+        <video class="cam-video" id="webcam" autoplay muted playsinline></video>
+        <div class="cam-ph" id="ph-you">😎</div>
+        <div class="rank-pin" id="rpin-you"></div>
+        <div class="streak-pin" id="sp-you">🔥 ON FIRE</div>
+        <div class="cam-overlay">
+          <div class="cam-name">You</div>
+          <div class="cam-score" id="b-you-score">0</div>
+        </div>
+      </div>
+      <!-- OPP -->
+      <div class="cam" id="cam-opp">
+        <div class="cam-ph" id="ph-opp">🤖</div>
+        <div class="rank-pin" id="rpin-opp"></div>
+        <div class="streak-pin" id="sp-opp">🔥 ON FIRE</div>
+        <div class="cam-overlay">
+          <div class="cam-name" id="b-opp-name">Opponent</div>
+          <div class="cam-score" id="b-opp-score">0</div>
+        </div>
+      </div>
+    </div>
+    <div class="answers-col">
+      <div class="answers" id="answers"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ RESULTS ═══ -->
+<div id="screen-results" class="screen">
+  <div style="text-align:center;padding-top:20px">
+    <div class="result-title" id="r-title">YOU WIN!</div>
+    <div class="result-sub" id="r-sub">Dominant performance</div>
+  </div>
+  <div class="rankup" id="rankup">🎉 RANK UP → <span id="new-rank-label"></span></div>
+  <div class="score-card">
+    <div class="sc-row"><span class="sc-label">Your Score</span><span style="font-weight:800" id="r-you-score">—</span></div>
+    <div class="sc-row"><span class="sc-label">Opponent Score</span><span style="font-weight:800" id="r-opp-score">—</span></div>
+    <div class="sc-row"><span class="sc-label">IQ Change</span><span id="r-iq-change">—</span></div>
+    <div class="sc-row"><span class="sc-label">New IQ</span><span style="font-weight:900;color:var(--cyan)" id="r-new-iq">—</span></div>
+    <div class="sc-row"><span class="sc-label">Current Rank</span><span id="r-rank">—</span></div>
+  </div>
+  <div class="res-btns">
+    <button class="btn btn-primary" onclick="playAgain()">PLAY AGAIN</button>
+    <button class="btn btn-secondary" onclick="nav('home')">HOME</button>
+  </div>
+</div>
+
+<!-- ═══ RANKS ═══ -->
+<div id="screen-ranks" class="screen">
+  <div style="padding:22px;flex:1;display:flex;flex-direction:column;gap:18px">
+    <div class="ranks-header">
+      <button class="btn btn-ghost" onclick="nav('home')">← Back</button>
+      <h1>Rank Ladder</h1>
+    </div>
+    <div class="your-rank-box">
+      <div style="font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px">Your Position</div>
+      <div style="font-size:1.35rem;font-weight:900" id="rk-cur"></div>
+      <div style="font-size:.82rem;color:var(--muted);margin-top:5px">IQ: <span id="rk-iq" style="color:var(--cyan);font-weight:800"></span></div>
+    </div>
+    <div class="rank-list" id="rank-list"></div>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+// RANK SYSTEM
+// ══════════════════════════════════════════
+const RANKS=[
+  {name:'NPC IQ',          sub:'1',min:0,   max:333,  color:'#6b7280',bg:'rgba(107,114,128,.15)',icon:'🤖'},
+  {name:'NPC IQ',          sub:'2',min:333, max:666,  color:'#6b7280',bg:'rgba(107,114,128,.15)',icon:'🤖'},
+  {name:'NPC IQ',          sub:'3',min:666, max:999,  color:'#6b7280',bg:'rgba(107,114,128,.15)',icon:'🤖'},
+  {name:'Bonehead IQ',     sub:'1',min:999, max:1049, color:'#b45309',bg:'rgba(180,83,9,.15)',   icon:'💀'},
+  {name:'Bonehead IQ',     sub:'2',min:1049,max:1099, color:'#d97706',bg:'rgba(217,119,6,.15)',  icon:'💀'},
+  {name:'Bonehead IQ',     sub:'3',min:1099,max:1149, color:'#f59e0b',bg:'rgba(245,158,11,.15)', icon:'💀'},
+  {name:'Ponderer IQ',     sub:'1',min:1149,max:1216, color:'#0891b2',bg:'rgba(8,145,178,.15)',  icon:'🤔'},
+  {name:'Ponderer IQ',     sub:'2',min:1216,max:1283, color:'#06b6d4',bg:'rgba(6,182,212,.15)',  icon:'🤔'},
+  {name:'Ponderer IQ',     sub:'3',min:1283,max:1349, color:'#22d3ee',bg:'rgba(34,211,238,.15)', icon:'🤔'},
+  {name:'Gigachad IQ',     sub:'1',min:1349,max:1432, color:'#15803d',bg:'rgba(21,128,61,.15)',  icon:'💪'},
+  {name:'Gigachad IQ',     sub:'2',min:1432,max:1516, color:'#16a34a',bg:'rgba(22,163,74,.15)',  icon:'💪'},
+  {name:'Gigachad IQ',     sub:'3',min:1516,max:1599, color:'#4ade80',bg:'rgba(74,222,128,.15)', icon:'💪'},
+  {name:'Low Tier Mog IQ', sub:'1',min:1599,max:1682, color:'#7c3aed',bg:'rgba(124,58,237,.15)', icon:'🧠'},
+  {name:'Low Tier Mog IQ', sub:'2',min:1682,max:1766, color:'#a855f7',bg:'rgba(168,85,247,.15)', icon:'🧠'},
+  {name:'Low Tier Mog IQ', sub:'3',min:1766,max:1849, color:'#d8b4fe',bg:'rgba(216,180,254,.15)',icon:'🧠'},
+  {name:'The Mog',         sub:'1',min:1849,max:1950, color:'#f59e0b',bg:'rgba(245,158,11,.2)',  icon:'👑'},
+  {name:'The Mog',         sub:'2',min:1950,max:2050, color:'#fbbf24',bg:'rgba(251,191,36,.2)',  icon:'👑'},
+  {name:'The Mog',         sub:'3',min:2050,max:99999,color:'#fde68a',bg:'rgba(253,230,138,.2)', icon:'👑',top500:true},
+];
+
+const OPP_NAMES=['xXBrainBlasterXx','QuizKingMike','SmartAlec99','NeuralNinja','GigaIQChris',
+  'MindMogger','QuizMaster2K','CerebroKing','IQGod420','BigBrainJay','FactBomber',
+  'KnowledgeDrop','SageMind','OmniQuizzer','BrainDominator','TriviaGoat','IntellectPro',
+  'MegaMind_X','QuizWarlord','GeniusModeOn'];
+const OPP_AVS=['🦊','🐺','🦁','🐯','🦅','🦄','🐉','👾','🎭','🤺','🦸','🧙'];
+
+// ══════════════════════════════════════════
+// QUESTION BANKS
+// ══════════════════════════════════════════
+const QS={
+  casual:[
+    {q:"What is the capital of Australia?",a:["Sydney","Melbourne","Canberra","Brisbane"],c:2},
+    {q:"How many sides does a hexagon have?",a:["5","6","7","8"],c:1},
+    {q:"What element has the chemical symbol 'Au'?",a:["Silver","Aluminum","Gold","Copper"],c:2},
+    {q:"Which planet is the largest in our solar system?",a:["Saturn","Neptune","Uranus","Jupiter"],c:3},
+    {q:"Who painted the Mona Lisa?",a:["Michelangelo","Leonardo da Vinci","Raphael","Donatello"],c:1},
+    {q:"What year did World War II end?",a:["1943","1944","1945","1946"],c:2},
+    {q:"How many bones are in the adult human body?",a:["196","206","216","226"],c:1},
+    {q:"What is the fastest land animal?",a:["Lion","Horse","Cheetah","Greyhound"],c:2},
+    {q:"Which ocean is the largest?",a:["Atlantic","Indian","Arctic","Pacific"],c:3},
+    {q:"What is the square root of 144?",a:["10","11","12","13"],c:2},
+    {q:"In which country was chess invented?",a:["China","India","Persia","Greece"],c:1},
+    {q:"What language has the most native speakers?",a:["English","Spanish","Mandarin Chinese","Hindi"],c:2},
+    {q:"Which US state is largest by area?",a:["Texas","California","Montana","Alaska"],c:3},
+    {q:"What is the hardest natural substance on Earth?",a:["Gold","Iron","Diamond","Quartz"],c:2},
+    {q:"Who wrote Romeo and Juliet?",a:["Charles Dickens","William Shakespeare","Jane Austen","Mark Twain"],c:1},
+    {q:"What is the currency of Japan?",a:["Yuan","Won","Yen","Rupee"],c:2},
+    {q:"How many planets are in our solar system?",a:["7","8","9","10"],c:1},
+    {q:"What is the longest river in the world?",a:["Amazon","Congo","Mississippi","Nile"],c:3},
+    {q:"What gas do plants absorb during photosynthesis?",a:["Oxygen","Nitrogen","Carbon Dioxide","Hydrogen"],c:2},
+    {q:"Who invented the telephone?",a:["Thomas Edison","Nikola Tesla","Alexander Graham Bell","Guglielmo Marconi"],c:2},
+  ],
+  speed:[
+    {q:"What is 7 × 8?",a:["48","54","56","64"],c:2},
+    {q:"How many seconds in a minute?",a:["30","45","60","90"],c:2},
+    {q:"What color is a stop sign?",a:["Blue","Green","Orange","Red"],c:3},
+    {q:"What is 15 + 27?",a:["40","41","42","43"],c:2},
+    {q:"How many days in a week?",a:["5","6","7","8"],c:2},
+    {q:"What is 9 × 9?",a:["72","81","90","99"],c:1},
+    {q:"What is 100 ÷ 4?",a:["20","25","30","40"],c:1},
+    {q:"What comes after Tuesday?",a:["Monday","Thursday","Wednesday","Friday"],c:2},
+    {q:"What is 13 × 4?",a:["48","50","52","54"],c:2},
+    {q:"How many months in a year?",a:["10","11","12","13"],c:2},
+    {q:"What is 6² (six squared)?",a:["30","36","42","48"],c:1},
+    {q:"What is 50% of 80?",a:["30","35","40","45"],c:2},
+    {q:"How many vowels in the English alphabet?",a:["4","5","6","7"],c:1},
+    {q:"What is 3³ (three cubed)?",a:["9","18","27","36"],c:2},
+    {q:"What is 18 ÷ 3?",a:["4","5","6","7"],c:2},
+    {q:"What is 11 × 11?",a:["111","121","112","131"],c:1},
+    {q:"How many hours in a day?",a:["20","22","24","26"],c:2},
+    {q:"What is 75 + 25?",a:["90","95","100","105"],c:2},
+    {q:"What is 2^10?",a:["512","1024","256","2048"],c:1},
+    {q:"What is 8 × 7?",a:["48","54","56","63"],c:2},
+  ],
+  iqmog:[
+    {q:"What does 'looksmaxxing' mean?",a:["Getting richer","Maximizing your physical appearance","Working out harder","Dressing better"],c:1},
+    {q:"What is 'mewing'?",a:["A face massage technique","Keeping your tongue on the roof of your mouth","A type of diet","A hair styling method"],c:1},
+    {q:"Which of these is most important for clear skin?",a:["Eating more sugar","Drinking enough water daily","Skipping moisturizer","Washing face once a week"],c:1},
+    {q:"What does SPF in sunscreen stand for?",a:["Skin Protection Formula","Sun Protection Factor","Solar Prevention Film","Sunburn Prevention Factor"],c:1},
+    {q:"What is 'mogging' someone?",a:["Challenging them to a fight","Outcompeting them in looks","Teaching them skincare","Giving fashion advice"],c:1},
+    {q:"Which of these helps reduce puffiness in your face?",a:["Eating salty food","Drinking less water","Getting more sleep","Skipping breakfast"],c:2},
+    {q:"What is 'hunter eyes' in looksmaxxing?",a:["Bright blue eyes","Deep-set eyes with a sharp gaze","Large round eyes","Eyes that are far apart"],c:1},
+    {q:"Which vitamin is most commonly linked to healthy glowing skin?",a:["Vitamin B","Vitamin C","Vitamin K","Vitamin D"],c:1},
+    {q:"What does moisturizer do for your skin?",a:["Removes dead skin","Locks in hydration","Adds SPF","Clears acne"],c:1},
+    {q:"Which of these is a looksmaxxing tip for your jawline?",a:["Chewing gum regularly","Eating soft foods","Sleeping more","Drinking soda"],c:0},
+    {q:"What is the best sleep position for maintaining good facial structure?",a:["Stomach","Side","Back","Fetal position"],c:2},
+    {q:"Which of these foods is best known for improving skin health?",a:["Fast food","Salmon and avocado","White bread","Energy drinks"],c:1},
+    {q:"What is the purpose of sunscreen in a skincare routine?",a:["Hydrate skin","Exfoliate","Protect against UV damage","Remove dark spots"],c:2},
+    {q:"Which of these is NOT a looksmaxxing practice?",a:["Good posture","Skincare routine","Eating junk food daily","Getting enough sleep"],c:2},
+    {q:"What does good posture do for your appearance?",a:["Nothing","Makes you look taller and more confident","Makes your skin glow","Slims your face"],c:1},
+    {q:"Which exercise is most associated with a wider, more aesthetic upper body?",a:["Sit-ups","Shoulder press and lateral raises","Leg curls","Calf raises"],c:1},
+    {q:"What is retinol commonly used for in skincare?",a:["Sun protection","Anti-aging and smoother skin","Hair growth","Teeth whitening"],c:1},
+    {q:"How many hours of sleep is recommended for best skin recovery?",a:["4-5 hours","6-7 hours","7-9 hours","10-12 hours"],c:2},
+    {q:"Which of these is considered a natural looksmaxx for your face?",a:["Smoking","Staying hydrated and eating well","Staying up all night","Eating high sodium foods"],c:1},
+    {q:"What does 'glow up' mean?",a:["Getting a tan","A dramatic improvement in someone's appearance","Wearing more makeup","Losing weight fast"],c:1},
+  ],
+  ranked:[
+    {q:"What is the powerhouse of the cell?",a:["Nucleus","Ribosome","Mitochondria","Golgi Apparatus"],c:2},
+    {q:"What is the formula for the area of a circle?",a:["πd","2πr","πr²","πd²"],c:2},
+    {q:"Which gas makes up the majority of Earth's atmosphere?",a:["Oxygen","Nitrogen","Carbon Dioxide","Argon"],c:1},
+    {q:"Who developed the theory of general relativity?",a:["Isaac Newton","Nikola Tesla","Albert Einstein","Stephen Hawking"],c:2},
+    {q:"What does DNA stand for?",a:["Deoxyribonucleic Acid","Deoxyribose Nucleic Acid","Dinitrogen Acid","Diphosphate Nucleic Acid"],c:0},
+    {q:"Which amendment to the US Constitution abolished slavery?",a:["12th","13th","14th","15th"],c:1},
+    {q:"What is the approximate speed of light?",a:["186,000 mph","186,000 km/s","300,000 km/s","186,000 miles/s"],c:2},
+    {q:"Who wrote 'The Great Gatsby'?",a:["Ernest Hemingway","F. Scott Fitzgerald","John Steinbeck","William Faulkner"],c:1},
+    {q:"What is the Pythagorean theorem?",a:["a+b=c","a²+b²=c²","a²-b²=c²","a×b=c²"],c:1},
+    {q:"Which organ produces insulin?",a:["Liver","Kidney","Pancreas","Spleen"],c:2},
+    {q:"How many elements are on the periodic table?",a:["108","112","118","124"],c:2},
+    {q:"What type of triangle has all equal sides?",a:["Scalene","Isosceles","Equilateral","Right"],c:2},
+    {q:"What is the chemical formula for table salt?",a:["KCl","NaCl","MgCl2","CaCl2"],c:1},
+    {q:"In what year did the French Revolution begin?",a:["1776","1783","1789","1799"],c:2},
+    {q:"What is the largest organ in the human body?",a:["Liver","Brain","Lungs","Skin"],c:3},
+    {q:"What is the value of pi to two decimal places?",a:["3.12","3.14","3.16","3.18"],c:1},
+    {q:"Who invented the World Wide Web?",a:["Bill Gates","Steve Jobs","Tim Berners-Lee","Vint Cerf"],c:2},
+    {q:"What is Newton's Second Law of Motion?",a:["F = mv","F = ma","F = mg","F = md"],c:1},
+    {q:"Which ancient wonder was located in Alexandria, Egypt?",a:["Colossus of Rhodes","Hanging Gardens","Lighthouse of Alexandria","Temple of Artemis"],c:2},
+    {q:"What is the most abundant element in the universe?",a:["Oxygen","Carbon","Helium","Hydrogen"],c:3},
+  ],
+};
+
+// ══════════════════════════════════════════
+// STATE
+// ══════════════════════════════════════════
+let G={
+  iq:1000,wins:0,losses:0,streak:0,
+  mode:'casual',currentQ:0,
+  pScore:0,oScore:0,pStreak:0,oStreak:0,
+  qs:[],timeLimit:15,timeLeft:15,
+  tInterval:null,oTimeout:null,
+  answered:false,oAnswered:false,
+  webcam:null,
+  opp:{name:'',iq:0,av:'🤖'},
+};
+
+function setBgTheme(t){
+  document.body.classList.toggle('theme-light', t==='light');
+  document.getElementById('bgt-dark').classList.toggle('bgt-active', t==='dark');
+  document.getElementById('bgt-light').classList.toggle('bgt-active', t==='light');
+  localStorage.setItem('iqm-theme', t);
+}
+
+(function bgSwitch(){
+  const vids=[document.getElementById('bgv0'),document.getElementById('bgv1')];
+  let cur=0;
+  setInterval(()=>{
+    vids[cur].classList.remove('bg-active');
+    cur=(cur+1)%vids.length;
+    vids[cur].classList.add('bg-active');
+  },3000);
+})();
+
+function load(){
+  const s=localStorage.getItem('iqm');
+  if(s){const d=JSON.parse(s);G.iq=d.iq??1000;G.wins=d.wins??0;G.losses=d.losses??0;G.streak=d.streak??0;}
+  const t=localStorage.getItem('iqm-theme')||'dark';
+  setBgTheme(t);
+}
+function save(){
+  localStorage.setItem('iqm',JSON.stringify({iq:G.iq,wins:G.wins,losses:G.losses,streak:G.streak}));
+}
+
+// ══════════════════════════════════════════
+// RANK HELPERS
+// ══════════════════════════════════════════
+function rankFor(iq){
+  for(let i=RANKS.length-1;i>=0;i--)if(iq>=RANKS[i].min)return RANKS[i];
+  return RANKS[0];
+}
+function rlabel(r){return r.sub?`${r.name} ${r.sub}`:r.name}
+function rbadge(r,sm){
+  const p=sm?'3px 7px':'4px 10px',f=sm?'.67rem':'.73rem';
+  const top=r.top500?` <span style="font-size:.6em;background:#f59e0b;color:#000;border-radius:10px;padding:1px 5px;vertical-align:middle">TOP 500</span>`:'';
+  return `<span style="background:${r.bg};color:${r.color};border-radius:20px;padding:${p};font-size:${f};font-weight:800;letter-spacing:.04em">${r.icon} ${rlabel(r)}${top}</span>`;
+}
+function rprogress(iq,r){
+  if(r.max===99999)return 1;
+  return Math.max(0,Math.min(1,(iq-r.min)/(r.max-r.min)));
+}
+
+// ══════════════════════════════════════════
+// NAVIGATION
+// ══════════════════════════════════════════
+function nav(s){
+  const inBattle=document.getElementById('screen-battle').classList.contains('active');
+  if(inBattle && s!=='results'){return;}
+  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
+  document.getElementById('screen-'+s).classList.add('active');
+  if(s==='home')refreshHome();
+  if(s==='ranks')refreshRanks();
+  if(s==='battle'){
+    history.pushState({battle:true},'');
+  }
+}
+
+window.addEventListener('popstate',function(e){
+  const inBattle=document.getElementById('screen-battle').classList.contains('active');
+  if(inBattle){history.pushState({battle:true},'');}
+});
+
+window.addEventListener('beforeunload',function(e){
+  const inBattle=document.getElementById('screen-battle').classList.contains('active');
+  if(inBattle){e.preventDefault();e.returnValue='';}
+});
+
+function refreshHome(){
+  const r=rankFor(G.iq);
+  document.getElementById('nav-iq').textContent=G.iq;
+  document.getElementById('nav-rank').innerHTML=rbadge(r,true);
+  document.getElementById('home-rank').innerHTML=rbadge(r);
+  document.getElementById('s-wins').textContent=G.wins;
+  document.getElementById('s-losses').textContent=G.losses;
+  document.getElementById('s-streak').textContent=G.streak;
+}
+
+function refreshRanks(){
+  const cur=rankFor(G.iq);
+  document.getElementById('rk-cur').innerHTML=rbadge(cur);
+  document.getElementById('rk-iq').textContent=G.iq;
+  const list=document.getElementById('rank-list');
+  list.innerHTML='';
+  [...RANKS].reverse().forEach(r=>{
+    const isCur=r===cur;
+    const prog=isCur?rprogress(G.iq,r):(G.iq>=r.max?1:0);
+    const row=document.createElement('div');
+    row.className='rank-row'+(isCur?' current':'');
+    row.innerHTML=`
+      <div class="ri">${r.icon}</div>
+      <div class="rinfo">
+        <div class="rname" style="color:${r.color}">${rlabel(r)}</div>
+        <div class="rrange">${r.top500?'Top 500 in the world · '+r.min+'+ IQ':r.min+'–'+r.max+' IQ'}</div>
+      </div>
+      <div class="rprog-wrap">
+        <div class="rprog-pct">${Math.round(prog*100)}%</div>
+        <div class="rprog"><div class="rprog-fill" style="width:${prog*100}%;background:${r.color}"></div></div>
+      </div>
+      ${isCur?'<div class="you-tag">YOU</div>':''}
+    `;
+    list.appendChild(row);
+  });
+}
+
+// ══════════════════════════════════════════
+// MATCHMAKING
+// ══════════════════════════════════════════
+function startMode(mode){
+  G.mode=mode;
+  G.opp={
+    name:OPP_NAMES[Math.floor(Math.random()*OPP_NAMES.length)],
+    av:OPP_AVS[Math.floor(Math.random()*OPP_AVS.length)],
+    iq:Math.max(800,G.iq+Math.floor((Math.random()-.5)*220)),
+  };
+  const labels={casual:'Casual Trivia',speed:'Speed Round',iqmog:'IQ MOG Mode',ranked:'Ranked'};
+  const r=rankFor(G.iq);
+  document.getElementById('mm-status').textContent=`Searching for ${labels[mode]} opponent…`;
+  document.getElementById('mm-you-rank').innerHTML=rbadge(r);
+  document.getElementById('mm-you-iq').textContent=`IQ: ${G.iq}`;
+  document.getElementById('mm-opp-av').textContent=G.opp.av;
+  document.getElementById('mm-opp-name').textContent='Finding…';
+  document.getElementById('mm-found').classList.add('hidden');
+  document.getElementById('mm-spin').style.display='flex';
+  nav('mm');
+  setTimeout(()=>{
+    const or=rankFor(G.opp.iq);
+    document.getElementById('mm-opp-name').textContent=G.opp.name;
+    document.getElementById('mm-opp-rank').innerHTML=rbadge(or);
+    document.getElementById('mm-opp-iq').textContent=`IQ: ${G.opp.iq}`;
+    document.getElementById('mm-status').textContent='Opponent found!';
+    document.getElementById('mm-spin').style.display='none';
+    document.getElementById('mm-found').classList.remove('hidden');
+    setTimeout(()=>showLobby(),1600);
+  },1800+Math.random()*2200);
+}
+
+// ══════════════════════════════════════════
+// LOBBY
+// ══════════════════════════════════════════
+function showLobby(){
+  const r=rankFor(G.iq),or=rankFor(G.opp.iq);
+  const titles={casual:'Casual Trivia',speed:'Speed Round',iqmog:'IQ MOG Mode',ranked:'Ranked Mode'};
+  document.getElementById('lobby-mode').textContent=titles[G.mode];
+  document.getElementById('lp-you-rank').innerHTML=rbadge(r);
+  document.getElementById('lp-you-iq').textContent=`IQ: ${G.iq}`;
+  document.getElementById('lp-you-status').textContent='Not Ready';
+  document.getElementById('lp-you-status').style.color='var(--muted)';
+  document.getElementById('lp-you').classList.remove('ready');
+  document.getElementById('lp-opp-av').textContent=G.opp.av;
+  document.getElementById('lp-opp-name').textContent=G.opp.name;
+  document.getElementById('lp-opp-rank').innerHTML=rbadge(or);
+  document.getElementById('lp-opp-iq').textContent=`IQ: ${G.opp.iq}`;
+  document.getElementById('ready-btn').disabled=false;
+  document.getElementById('ready-btn').textContent='READY UP';
+  nav('lobby');
+}
+
+function playerReady(){
+  document.getElementById('lp-you-status').textContent='Ready ✓';
+  document.getElementById('lp-you-status').style.color='var(--green)';
+  document.getElementById('lp-you').classList.add('ready');
+  document.getElementById('ready-btn').disabled=true;
+  document.getElementById('ready-btn').textContent='WAITING…';
+  setTimeout(()=>countdown(),1200);
+}
+
+// ══════════════════════════════════════════
+// COUNTDOWN
+// ══════════════════════════════════════════
+function countdown(){
+  nav('countdown');
+  let n=3;
+  const el=document.getElementById('count-num');
+  function tick(){
+    el.style.animation='none';
+    void el.offsetHeight;
+    el.style.animation='countPop .85s cubic-bezier(.34,1.56,.64,1) forwards';
+    if(n>0){el.textContent=n--;setTimeout(tick,900);}
+    else{el.textContent='GO!';setTimeout(()=>startBattle(),780);}
+  }
+  tick();
+}
+
+// ══════════════════════════════════════════
+// BATTLE
+// ══════════════════════════════════════════
+function startBattle(){
+  const pool=[...QS[G.mode]];
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  G.qs=pool.slice(0,10);
+  G.currentQ=0;G.pScore=0;G.oScore=0;G.pStreak=0;G.oStreak=0;
+  G.timeLimit=G.mode==='speed'?8:15;
+
+  const r=rankFor(G.iq),or=rankFor(G.opp.iq);
+  // rank pins
+  const rpin=document.getElementById('rpin-you');
+  rpin.textContent=`${r.icon} ${rlabel(r)}`;
+  rpin.style.cssText=`position:absolute;top:10px;left:10px;padding:5px 11px;border-radius:8px;font-size:.75rem;font-weight:800;background:${r.bg};color:${r.color}`;
+  const rpino=document.getElementById('rpin-opp');
+  rpino.textContent=`${or.icon} ${rlabel(or)}`;
+  rpino.style.cssText=`position:absolute;top:10px;left:10px;padding:5px 11px;border-radius:8px;font-size:.75rem;font-weight:800;background:${or.bg};color:${or.color}`;
+  document.getElementById('b-opp-name').textContent=G.opp.name;
+  document.getElementById('ph-opp').textContent=G.opp.av;
+  document.getElementById('opp-ind-name').textContent=G.opp.name.substring(0,10);
+
+  initWebcam();
+  nav('battle');
+  nextQ();
+}
+
+function initWebcam(){
+  if(!navigator.mediaDevices?.getUserMedia)return;
+  navigator.mediaDevices.getUserMedia({video:true,audio:false}).then(s=>{
+    G.webcam=s;
+    const v=document.getElementById('webcam');
+    v.srcObject=s;v.style.display='block';
+    document.getElementById('ph-you').style.display='none';
+  }).catch(()=>{});
+}
+function stopWebcam(){
+  if(G.webcam){G.webcam.getTracks().forEach(t=>t.stop());G.webcam=null;}
+  document.getElementById('webcam').style.display='none';
+  document.getElementById('ph-you').style.display='flex';
+}
+
+function nextQ(){
+  if(G.currentQ>=G.qs.length){endBattle();return;}
+  const q=G.qs[G.currentQ];
+  G.answered=false;G.oAnswered=false;
+  G.timeLeft=G.timeLimit;
+
+  document.getElementById('q-num').textContent=`Question ${G.currentQ+1} of ${G.qs.length}`;
+  document.getElementById('q-text').textContent=q.q;
+  document.getElementById('b-you-score').textContent=G.pScore;
+  document.getElementById('b-opp-score').textContent=G.oScore;
+  document.getElementById('opp-ind').style.display='none';
+  document.getElementById('t-bar').style.width='100%';
+
+  // streak pins
+  document.getElementById('sp-you').style.display=G.pStreak>=3?'block':'none';
+  document.getElementById('sp-opp').style.display=G.oStreak>=3?'block':'none';
+
+  const td=document.getElementById('t-display');
+  td.textContent=G.timeLeft;td.className='timer-display';
+
+  // answers
+  const grid=document.getElementById('answers');
+  grid.innerHTML='';
+  q.a.forEach((ans,i)=>{
+    const b=document.createElement('button');
+    b.className='ans-btn';b.textContent=ans;
+    b.onclick=()=>playerAnswer(i);
+    grid.appendChild(b);
+  });
+
+  clearInterval(G.tInterval);
+  G.tInterval=setInterval(()=>{
+    G.timeLeft--;
+    td.textContent=G.timeLeft;
+    document.getElementById('t-bar').style.width=`${(G.timeLeft/G.timeLimit)*100}%`;
+    if(G.timeLeft<=3)td.className='timer-display urgent';
+    if(G.timeLeft<=0){clearInterval(G.tInterval);if(!G.answered)playerAnswer(-1);}
+  },1000);
+
+  scheduleOpp();
+}
+
+function scheduleOpp(){
+  const mn=G.mode==='speed'?900:2000,mx=G.mode==='speed'?5500:11000;
+  const delay=mn+Math.random()*(mx-mn);
+  G.oTimeout=setTimeout(()=>{
+    if(!G.oAnswered){
+      G.oAnswered=true;
+      const ok=Math.random()<.74;
+      if(ok){G.oScore++;G.oStreak++;}else G.oStreak=0;
+      document.getElementById('b-opp-score').textContent=G.oScore;
+      document.getElementById('opp-ind').style.display='flex';
+      document.getElementById('sp-opp').style.display=G.oStreak>=3?'block':'none';
+      // flash opp cam
+      document.getElementById('cam-opp').classList.add('opp-flash');
+      setTimeout(()=>document.getElementById('cam-opp').classList.remove('opp-flash'),420);
+      if(G.answered)setTimeout(()=>advance(),900);
+    }
+  },delay);
+}
+
+function playerAnswer(idx){
+  if(G.answered)return;
+  G.answered=true;
+  clearInterval(G.tInterval);clearTimeout(G.oTimeout);
+  const q=G.qs[G.currentQ];
+  const btns=document.querySelectorAll('.ans-btn');
+  btns.forEach(b=>b.disabled=true);
+  const ok=idx===q.c;
+  if(idx>=0)btns[idx].classList.add(ok?'correct':'wrong');
+  btns[q.c].classList.add('correct');
+  if(ok){G.pScore++;G.pStreak++;}else G.pStreak=0;
+  document.getElementById('b-you-score').textContent=G.pScore;
+  document.getElementById('sp-you').style.display=G.pStreak>=3?'block':'none';
+
+  if(!G.oAnswered){
+    clearTimeout(G.oTimeout);
+    setTimeout(()=>{
+      if(!G.oAnswered){
+        G.oAnswered=true;
+        const ok2=Math.random()<.74;
+        if(ok2){G.oScore++;G.oStreak++;}else G.oStreak=0;
+        document.getElementById('b-opp-score').textContent=G.oScore;
+        document.getElementById('opp-ind').style.display='flex';
+        document.getElementById('sp-opp').style.display=G.oStreak>=3?'block':'none';
+        setTimeout(()=>advance(),700);
+      }
+    },500+Math.random()*1500);
+  }else{
+    setTimeout(()=>advance(),900);
+  }
+}
+
+function advance(){
+  G.currentQ++;
+  if(G.currentQ<G.qs.length)nextQ();else endBattle();
+}
+
+// ══════════════════════════════════════════
+// END BATTLE
+// ══════════════════════════════════════════
+function endBattle(){
+  clearInterval(G.tInterval);clearTimeout(G.oTimeout);
+  stopWebcam();
+  const won=G.pScore>G.oScore,tied=G.pScore===G.oScore;
+  const oldIQ=G.iq,oldRank=rankFor(G.iq);
+  let delta=0;
+  if(G.mode==='ranked'){delta=won?25:(tied?0:-20);}
+  else{delta=won?15:0;}
+  G.iq=Math.max(600,G.iq+delta);
+  if(won){G.wins++;G.streak++;}else if(!tied){G.losses++;G.streak=0;}
+  save();
+  const newRank=rankFor(G.iq);
+  const up=newRank!==oldRank&&G.iq>oldIQ;
+
+  const rt=document.getElementById('r-title'),rs=document.getElementById('r-sub');
+  if(won){
+    rt.textContent='YOU WIN!';rt.className='result-title win';
+    rs.textContent=(G.pScore-G.oScore>=3)?'🔥 Dominant performance':'✓ Hard-fought victory';
+  }else if(tied){
+    rt.textContent="IT'S A TIE";rt.className='result-title tie';
+    rs.textContent='Evenly matched — no IQ change';
+  }else{
+    rt.textContent='YOU LOST';rt.className='result-title loss';
+    rs.textContent=G.mode==='ranked'?'Study up and run it back':'No IQ lost — run it back';
+  }
+  document.getElementById('r-you-score').textContent=`${G.pScore}/${G.qs.length}`;
+  document.getElementById('r-opp-score').textContent=`${G.oScore}/${G.qs.length}`;
+  const dc=document.getElementById('r-iq-change');
+  dc.textContent=delta>=0?`+${delta}`:delta;
+  dc.className=delta>=0?'iq-pos':'iq-neg';
+  document.getElementById('r-new-iq').textContent=G.iq;
+  document.getElementById('r-rank').innerHTML=rbadge(newRank);
+  const ru=document.getElementById('rankup');
+  if(up){ru.style.display='block';document.getElementById('new-rank-label').textContent=rlabel(newRank);}
+  else ru.style.display='none';
+  nav('results');
+}
+
+function playAgain(){startMode(G.mode);}
+
+// ══════════════════════════════════════════
+// INIT
+// ══════════════════════════════════════════
+load();
+refreshHome();
+</script>
+</body>
+</html>

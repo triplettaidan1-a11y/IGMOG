@@ -733,60 +733,56 @@ function startMode(mode){
 function onlineMM(mode){
   const pid=getPlayerId();
   const qRef=fbDb.ref('queue/'+mode);
-  // check for existing player waiting
-  qRef.once('value',snap=>{
+  qRef.once('value').then(snap=>{
     let matched=false;
     snap.forEach(c=>{
-      if(c.key===pid)return;
-      // found someone waiting — join their room
+      if(c.key===pid||matched)return;
       matched=true;
       const host=c.val();
       const roomId=c.key+'_'+pid;
       G.roomId=roomId;G.isHost=false;G.online=true;
-      // build room
       const pool=[...QS[mode]];
       for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
       const qs=pool.slice(0,10);
       fbDb.ref('rooms/'+roomId).set({
-        mode:mode,
-        questions:qs,
+        mode:mode,questions:qs,
         host:{id:c.key,name:host.name,iq:host.iq,av:host.av},
         guest:{id:pid,name:getPlayerName(),iq:G.iq,av:'😎'},
-        status:'lobby',
-        scores:{host:0,guest:0},
-        answers:{},
-        currentQ:0,
-        createdAt:Date.now()
+        status:'lobby',scores:{host:0,guest:0},answers:{},
+        currentQ:0,createdAt:Date.now()
       });
-      // remove both from queue
       c.ref.remove();
       G.opp={name:host.name,av:host.av,iq:host.iq};
       showMMFound();
-      return true;
     });
     if(!matched){
-      // no one waiting — add ourselves to queue
       mmQueueRef=qRef.child(pid);
       mmQueueRef.set({name:getPlayerName(),iq:G.iq,av:'😎',ts:Date.now()});
       mmQueueRef.onDisconnect().remove();
-      // listen for someone creating a room with us
-      const roomsRef=fbDb.ref('rooms');
-      const roomListener=roomsRef.orderByChild('host/id').equalTo(pid).on('child_added',snap=>{
-        const room=snap.val();
-        if(room.status!=='lobby')return;
-        G.roomId=snap.key;G.isHost=true;G.online=true;
-        roomsRef.off('child_added',roomListener);
-        cleanupMM();
-        G.opp={name:room.guest.name,av:room.guest.av,iq:room.guest.iq};
-        showMMFound();
-      });
-      // timeout → bot fallback after 15s
+      // listen for a room where we are the host
+      const checkRoom=setInterval(()=>{
+        fbDb.ref('rooms').once('value').then(rs=>{
+          rs.forEach(r=>{
+            const v=r.val();
+            if(v.host&&v.host.id===pid&&v.status==='lobby'){
+              clearInterval(checkRoom);
+              G.roomId=r.key;G.isHost=true;G.online=true;
+              cleanupMM();
+              G.opp={name:v.guest.name,av:v.guest.av,iq:v.guest.iq};
+              showMMFound();
+            }
+          });
+        });
+      },2000);
       mmTimeout=setTimeout(()=>{
-        roomsRef.off('child_added',roomListener);
+        clearInterval(checkRoom);
         cleanupMM();
         botFallback(mode);
       },15000);
     }
+  }).catch(e=>{
+    console.warn('Firebase MM failed:',e);
+    botFallback(mode);
   });
 }
 
@@ -864,17 +860,17 @@ function countdown(){
 // ══════════════════════════════════════════
 function startBattle(){
   if(G.online&&G.roomId){
-    // fetch synced questions from room
-    fbDb.ref('rooms/'+G.roomId+'/questions').once('value',snap=>{
+    fbDb.ref('rooms/'+G.roomId+'/questions').once('value').then(snap=>{
       G.qs=snap.val()||[];
-      initBattle();
-    });
-  }else{
-    const pool=[...QS[G.mode]];
-    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
-    G.qs=pool.slice(0,10);
-    initBattle();
-  }
+      if(!G.qs.length){G.online=false;G.roomId=null;localQuestions();} else initBattle();
+    }).catch(()=>{G.online=false;G.roomId=null;localQuestions();});
+  }else{localQuestions();}
+}
+function localQuestions(){
+  const pool=[...QS[G.mode]];
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+  G.qs=pool.slice(0,10);
+  initBattle();
 }
 function initBattle(){
   G.currentQ=0;G.pScore=0;G.oScore=0;G.pStreak=0;G.oStreak=0;

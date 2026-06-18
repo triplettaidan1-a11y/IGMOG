@@ -1138,8 +1138,9 @@ function submitScore(){
   });
 }
 
-let lbUnsubscribe=null;
+let lbRef=null;
 let lbCurrentTab='global';
+function lbOff(){if(lbRef){lbRef.off();lbRef=null;}}
 
 function lbTab(t){
   lbCurrentTab=t;
@@ -1173,9 +1174,9 @@ function renderLb(){
     return;
   }
   body.innerHTML=`<div class="lb-loading"><div class="lb-spin"></div><br>Loading…</div>`;
-  if(lbUnsubscribe)lbUnsubscribe();
-  const ref=fbDb.ref('leaderboard').orderByChild('iq').limitToLast(50);
-  lbUnsubscribe=ref.on('value',snap=>{
+  lbOff();
+  lbRef=fbDb.ref('leaderboard').orderByChild('iq').limitToLast(50);
+  lbRef.on('value',snap=>{
     const rows=[];
     snap.forEach(c=>rows.push({id:c.key,...c.val()}));
     rows.sort((a,b)=>b.iq-a.iq);
@@ -1204,7 +1205,7 @@ function renderLb(){
 function nav(s){
   const inBattle=document.getElementById('screen-battle').classList.contains('active');
   if(inBattle&&s!=='results')return;
-  if(lbUnsubscribe&&s!=='lb'){lbUnsubscribe();lbUnsubscribe=null;}
+  if(s!=='lb')lbOff();
   document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
   document.getElementById('screen-'+s).classList.add('active');
   if(s==='home')refreshHome();

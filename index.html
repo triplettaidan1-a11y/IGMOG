@@ -9,6 +9,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Rajdhani:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <style>
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 :root{
@@ -72,6 +73,24 @@ body::before{content:'';position:fixed;inset:0;background:radial-gradient(ellips
 
 /* ═══════════════════ HOME ═══════════════════ */
 .home-nav{position:fixed;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:14px 28px;background:rgba(8,0,0,.88);backdrop-filter:blur(14px);border-bottom:1px solid var(--border);z-index:100}
+.nav-left{position:relative;cursor:pointer;display:flex;align-items:center;gap:8px}
+.nav-left .logo-sm{pointer-events:none}
+.nav-drop-arrow{font-size:.55rem;color:var(--muted);transition:transform .2s}
+.nav-left.open .nav-drop-arrow{transform:rotate(180deg)}
+.nav-dropdown{display:none;position:absolute;top:calc(100% + 10px);left:0;min-width:220px;background:var(--surface);border:1px solid var(--border);border-radius:14px;box-shadow:0 12px 40px rgba(0,0,0,.6);overflow:hidden;z-index:200}
+.nav-left.open .nav-dropdown{display:block}
+.dd-user{padding:14px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.dd-av{font-size:1.4rem}
+.dd-name{font-family:'Bebas Neue',sans-serif;font-size:.95rem;letter-spacing:.04em}
+.dd-email{font-size:.68rem;color:var(--muted);margin-top:1px}
+.dd-item{display:block;width:100%;padding:12px 16px;border:none;background:none;color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.9rem;font-weight:600;text-align:left;cursor:pointer;transition:background .15s}
+.dd-item:hover{background:rgba(180,0,0,.12)}
+.dd-divider{height:1px;background:var(--border);margin:0}
+.auth-form{padding:16px;display:flex;flex-direction:column;gap:10px}
+.auth-input{padding:10px 12px;border-radius:10px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:.9rem;font-weight:600;outline:none;transition:border-color .2s}
+.auth-input:focus{border-color:#ef4444}
+.auth-input::placeholder{color:var(--muted)}
+.auth-err{font-size:.72rem;color:#ef4444;text-align:center;display:none}
 .nav-right{display:flex;align-items:center;gap:10px}
 .nav-iq{font-size:.85rem;color:var(--muted)}
 .nav-iq span{color:var(--cyan);font-weight:800}
@@ -275,7 +294,44 @@ h1{font-size:1.4rem;font-weight:900}
 
 
   <nav class="home-nav">
-    <div class="logo-sm">IQMogged</div>
+    <div class="nav-left" id="nav-left" onclick="toggleDropdown(event)">
+      <div class="logo-sm">IQMogged</div>
+      <span class="nav-drop-arrow">▼</span>
+      <div class="nav-dropdown" id="nav-dropdown">
+        <!-- Logged out view -->
+        <div id="dd-logged-out">
+          <div id="dd-login-form" class="auth-form">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.05em;text-align:center">Log In</div>
+            <input class="auth-input" id="login-email" type="email" placeholder="Email">
+            <input class="auth-input" id="login-pass" type="password" placeholder="Password">
+            <div class="auth-err" id="login-err"></div>
+            <button class="btn btn-primary" style="padding:10px;font-size:.85rem" onclick="doLogin(event)">LOG IN</button>
+            <button class="dd-item" style="text-align:center;color:var(--muted);font-size:.78rem" onclick="showSignup(event)">Don't have an account? Sign Up</button>
+          </div>
+          <div id="dd-signup-form" class="auth-form" style="display:none">
+            <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.05em;text-align:center">Sign Up</div>
+            <input class="auth-input" id="signup-email" type="email" placeholder="Email">
+            <input class="auth-input" id="signup-pass" type="password" placeholder="Password (6+ chars)">
+            <div class="auth-err" id="signup-err"></div>
+            <button class="btn btn-primary" style="padding:10px;font-size:.85rem" onclick="doSignup(event)">CREATE ACCOUNT</button>
+            <button class="dd-item" style="text-align:center;color:var(--muted);font-size:.78rem" onclick="showLogin(event)">Already have an account? Log In</button>
+          </div>
+        </div>
+        <!-- Logged in view -->
+        <div id="dd-logged-in" style="display:none">
+          <div class="dd-user">
+            <span class="dd-av" id="dd-av">😎</span>
+            <div>
+              <div class="dd-name" id="dd-name">Mogger</div>
+              <div class="dd-email" id="dd-email">—</div>
+            </div>
+          </div>
+          <button class="dd-item" onclick="nav('profile');closeDropdown()">✏️ Edit Profile</button>
+          <div class="dd-divider"></div>
+          <button class="dd-item" onclick="doLogout(event)" style="color:#ef4444">🚪 Sign Out</button>
+        </div>
+      </div>
+    </div>
     <div class="nav-right">
       <div class="nav-iq">IQ: <span id="nav-iq">1000</span></div>
       <div id="nav-rank"></div>
@@ -1139,14 +1195,90 @@ const FB_CONFIG={
   appId:"1:491031323281:web:9da9269dc1b5385abb5530"
 };
 
-let fbDb=null;
+let fbDb=null,fbAuth=null;
 function fbReady(){return FB_CONFIG.apiKey!=='YOUR_API_KEY';}
 try{
   if(fbReady()){
     firebase.initializeApp(FB_CONFIG);
     fbDb=firebase.database();
+    fbAuth=firebase.auth();
   }
 }catch(e){console.warn('Firebase not configured',e);}
+
+// ══════════════════════════════════════════
+// AUTH / DROPDOWN
+// ══════════════════════════════════════════
+function toggleDropdown(e){
+  e.stopPropagation();
+  document.getElementById('nav-left').classList.toggle('open');
+}
+function closeDropdown(){
+  document.getElementById('nav-left').classList.remove('open');
+}
+document.addEventListener('click',e=>{
+  if(!document.getElementById('nav-left').contains(e.target))closeDropdown();
+});
+
+function showLogin(e){e&&e.stopPropagation();document.getElementById('dd-login-form').style.display='';document.getElementById('dd-signup-form').style.display='none';}
+function showSignup(e){e&&e.stopPropagation();document.getElementById('dd-signup-form').style.display='';document.getElementById('dd-login-form').style.display='none';}
+
+function updateAuthUI(user){
+  if(user){
+    document.getElementById('dd-logged-out').style.display='none';
+    document.getElementById('dd-logged-in').style.display='';
+    document.getElementById('dd-av').textContent=getPlayerAvatar();
+    document.getElementById('dd-name').textContent=getPlayerName();
+    document.getElementById('dd-email').textContent=user.email;
+  }else{
+    document.getElementById('dd-logged-out').style.display='';
+    document.getElementById('dd-logged-in').style.display='none';
+    showLogin();
+  }
+}
+
+function doSignup(e){
+  e.stopPropagation();
+  const email=document.getElementById('signup-email').value.trim();
+  const pass=document.getElementById('signup-pass').value;
+  const err=document.getElementById('signup-err');
+  err.style.display='none';
+  if(!email||!pass){err.textContent='Fill in all fields';err.style.display='block';return;}
+  if(!fbAuth){err.textContent='Firebase not configured';err.style.display='block';return;}
+  fbAuth.createUserWithEmailAndPassword(email,pass).then(cred=>{
+    updateAuthUI(cred.user);
+    submitScore();
+  }).catch(ex=>{
+    err.textContent=ex.message.replace('Firebase: ','').replace(/\(auth\/.*\)/,'');
+    err.style.display='block';
+  });
+}
+
+function doLogin(e){
+  e.stopPropagation();
+  const email=document.getElementById('login-email').value.trim();
+  const pass=document.getElementById('login-pass').value;
+  const err=document.getElementById('login-err');
+  err.style.display='none';
+  if(!email||!pass){err.textContent='Fill in all fields';err.style.display='block';return;}
+  if(!fbAuth){err.textContent='Firebase not configured';err.style.display='block';return;}
+  fbAuth.signInWithEmailAndPassword(email,pass).then(cred=>{
+    updateAuthUI(cred.user);
+  }).catch(ex=>{
+    err.textContent=ex.message.replace('Firebase: ','').replace(/\(auth\/.*\)/,'');
+    err.style.display='block';
+  });
+}
+
+function doLogout(e){
+  e.stopPropagation();
+  if(fbAuth)fbAuth.signOut();
+  updateAuthUI(null);
+  closeDropdown();
+}
+
+if(fbAuth){
+  fbAuth.onAuthStateChanged(user=>updateAuthUI(user));
+}
 
 function getPlayerId(){
   let id=localStorage.getItem('iqm-pid');

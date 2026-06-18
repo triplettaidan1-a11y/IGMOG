@@ -297,7 +297,7 @@ h1{font-size:1.4rem;font-weight:900}
     <div class="nav-left" id="nav-left" onclick="toggleDropdown(event)">
       <div class="logo-sm">IQMogged</div>
       <span class="nav-drop-arrow">▼</span>
-      <div class="nav-dropdown" id="nav-dropdown">
+      <div class="nav-dropdown" id="nav-dropdown" onclick="event.stopPropagation()">
         <!-- Logged out view -->
         <div id="dd-logged-out">
           <div id="dd-login-form" class="auth-form">

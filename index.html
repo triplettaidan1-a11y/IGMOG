@@ -311,7 +311,7 @@ h1{font-size:1.4rem;font-weight:900}
           <div id="dd-signup-form" class="auth-form" style="display:none">
             <div style="font-family:'Bebas Neue',sans-serif;font-size:1.1rem;letter-spacing:.05em;text-align:center">Sign Up</div>
             <input class="auth-input" id="signup-email" type="email" placeholder="Email">
-            <input class="auth-input" id="signup-pass" type="password" placeholder="Password (6+ chars)">
+            <input class="auth-input" id="signup-pass" type="password" placeholder="Password (8+ chars, A-Z, special)">
             <div class="auth-err" id="signup-err"></div>
             <button class="btn btn-primary" style="padding:10px;font-size:.85rem" onclick="doSignup(event)">CREATE ACCOUNT</button>
             <button class="dd-item" style="text-align:center;color:var(--muted);font-size:.78rem" onclick="showLogin(event)">Already have an account? Log In</button>
@@ -1243,6 +1243,9 @@ function doSignup(e){
   const err=document.getElementById('signup-err');
   err.style.display='none';
   if(!email||!pass){err.textContent='Fill in all fields';err.style.display='block';return;}
+  if(pass.length<8){err.textContent='Password must be at least 8 characters';err.style.display='block';return;}
+  if(!/[A-Z]/.test(pass)){err.textContent='Password must contain a capital letter';err.style.display='block';return;}
+  if(!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pass)){err.textContent='Password must contain a special character (!@#$%...)';err.style.display='block';return;}
   if(!fbAuth){err.textContent='Firebase not configured';err.style.display='block';return;}
   fbAuth.createUserWithEmailAndPassword(email,pass).then(cred=>{
     updateAuthUI(cred.user);

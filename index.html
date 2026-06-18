@@ -227,6 +227,22 @@ video.cam-video{width:100%;height:100%;object-fit:cover;display:none}
 .lb-loading{text-align:center;color:var(--muted);padding:40px 0}
 .lb-spin{display:inline-block;width:32px;height:32px;border-radius:50%;border:3px solid var(--border);border-top-color:#ef4444;animation:spin 1s linear infinite;margin-bottom:10px}
 
+/* ═══════════════════ PROFILE SETUP ═══════════════════ */
+#screen-profile{align-items:center;justify-content:center;padding:24px;gap:20px}
+.profile-box{background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:28px;width:100%;max-width:380px;display:flex;flex-direction:column;gap:18px;align-items:center}
+.profile-box h2{font-family:'Bebas Neue',sans-serif;font-size:1.8rem;letter-spacing:.06em}
+.name-input{width:100%;padding:14px 16px;border-radius:12px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text);font-family:'Rajdhani',sans-serif;font-size:1.1rem;font-weight:600;text-align:center;outline:none;transition:border-color .2s}
+.name-input:focus{border-color:#ef4444}
+.name-input::placeholder{color:var(--muted)}
+.avatar-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;width:100%}
+.av-pick{width:100%;aspect-ratio:1;border-radius:14px;border:2px solid var(--border);background:var(--surface2);cursor:pointer;font-size:1.8rem;display:flex;align-items:center;justify-content:center;transition:all .18s}
+.av-pick:hover{border-color:var(--muted);transform:scale(1.06)}
+.av-pick.selected{border-color:#ef4444;background:rgba(180,0,0,.15);box-shadow:0 0 12px rgba(220,0,0,.3)}
+.home-user{display:flex;align-items:center;gap:8px;margin-bottom:4px;cursor:pointer;transition:opacity .2s}
+.home-user:hover{opacity:.8}
+.home-av{font-size:2rem}
+.home-name{font-family:'Bebas Neue',sans-serif;font-size:1.3rem;letter-spacing:.05em}
+
 /* UTILITY */
 .fade-in{animation:fadeIn .3s ease}
 @keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
@@ -235,6 +251,18 @@ h1{font-size:1.4rem;font-weight:900}
 </style>
 </head>
 <body>
+
+<!-- ═══ PROFILE SETUP ═══ -->
+<div id="screen-profile" class="screen">
+  <div class="logo-xl">IQMogged</div>
+  <div class="profile-box">
+    <h2>Create Your Profile</h2>
+    <input class="name-input" id="pname-input" type="text" placeholder="Enter username…" maxlength="16">
+    <div style="font-size:.78rem;color:var(--muted);text-transform:uppercase;letter-spacing:.08em">Choose Avatar</div>
+    <div class="avatar-grid" id="av-grid"></div>
+    <button class="btn btn-primary" style="width:100%" onclick="saveProfile()">LET'S MOG</button>
+  </div>
+</div>
 
 <!-- ═══ HOME ═══ -->
 <div id="screen-home" class="screen active">
@@ -259,6 +287,11 @@ h1{font-size:1.4rem;font-weight:900}
   </nav>
   <div class="home-hero fade-in">
     <div class="logo-xl">IQMogged</div>
+    <div class="home-user" onclick="nav('profile')" title="Edit profile">
+      <span class="home-av" id="home-av">😎</span>
+      <span class="home-name" id="home-name">Mogger</span>
+      <span style="font-size:.7rem;color:var(--muted)">✏️</span>
+    </div>
     <div class="tagline">Live intelligence battles. Step in, compete, and prove you're smarter.</div>
     <div id="home-rank" style="margin:4px 0"></div>
     <div class="stats-row">
@@ -1121,9 +1154,53 @@ function getPlayerId(){
   return id;
 }
 function getPlayerName(){
-  let n=localStorage.getItem('iqm-pname');
-  if(!n){n='Mogger'+Math.floor(Math.random()*9000+1000);localStorage.setItem('iqm-pname',n);}
-  return n;
+  return localStorage.getItem('iqm-pname')||'Mogger';
+}
+function getPlayerAvatar(){
+  return localStorage.getItem('iqm-pav')||'😎';
+}
+
+const AVATARS=['😎','🔥','💀','👑','🧠','💪','🐺','🦁','🐉','🦅','🗡️','⚡','🎯','💎','🖤'];
+let selectedAv=getPlayerAvatar();
+
+function buildAvatarGrid(){
+  const grid=document.getElementById('av-grid');
+  grid.innerHTML='';
+  AVATARS.forEach(av=>{
+    const btn=document.createElement('div');
+    btn.className='av-pick'+(av===selectedAv?' selected':'');
+    btn.textContent=av;
+    btn.onclick=()=>{
+      selectedAv=av;
+      grid.querySelectorAll('.av-pick').forEach(b=>b.classList.remove('selected'));
+      btn.classList.add('selected');
+    };
+    grid.appendChild(btn);
+  });
+}
+
+function saveProfile(){
+  const name=document.getElementById('pname-input').value.trim();
+  if(!name){document.getElementById('pname-input').style.borderColor='#ef4444';return;}
+  localStorage.setItem('iqm-pname',name);
+  localStorage.setItem('iqm-pav',selectedAv);
+  refreshHomeProfile();
+  nav('home');
+}
+
+function refreshHomeProfile(){
+  document.getElementById('home-name').textContent=getPlayerName();
+  document.getElementById('home-av').textContent=getPlayerAvatar();
+}
+
+function checkFirstVisit(){
+  if(!localStorage.getItem('iqm-pname')){
+    document.getElementById('screen-home').classList.remove('active');
+    document.getElementById('screen-profile').classList.add('active');
+    buildAvatarGrid();
+  }else{
+    refreshHomeProfile();
+  }
 }
 
 function submitScore(){
@@ -1208,8 +1285,9 @@ function nav(s){
   if(s!=='lb')lbOff();
   document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
   document.getElementById('screen-'+s).classList.add('active');
-  if(s==='home')refreshHome();
+  if(s==='home'){refreshHome();refreshHomeProfile();}
   if(s==='ranks')refreshRanks();
+  if(s==='profile'){selectedAv=getPlayerAvatar();buildAvatarGrid();document.getElementById('pname-input').value=getPlayerName();}
   if(s==='lb'){lbCurrentTab='global';document.getElementById('tab-global').classList.add('active');document.getElementById('tab-me').classList.remove('active');renderLb();}
   if(s==='battle')history.pushState({battle:true},'');
 }
@@ -1219,6 +1297,7 @@ function nav(s){
 // ══════════════════════════════════════════
 load();
 refreshHome();
+checkFirstVisit();
 </script>
 </body>
 </html>

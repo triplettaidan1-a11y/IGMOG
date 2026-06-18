@@ -700,35 +700,116 @@ function refreshRanks(){
 }
 
 // ══════════════════════════════════════════
-// MATCHMAKING
+// MATCHMAKING (ONLINE + BOT FALLBACK)
 // ══════════════════════════════════════════
+let mmQueueRef=null,mmTimeout=null,mmRoomRef=null,mmRoomListener=null;
+G.online=false;G.roomId=null;G.isHost=false;G.oppReady=false;
+
+function cleanupMM(){
+  if(mmQueueRef){mmQueueRef.remove();mmQueueRef=null;}
+  if(mmTimeout){clearTimeout(mmTimeout);mmTimeout=null;}
+}
+
 function startMode(mode){
-  G.mode=mode;
-  G.opp={
-    name:OPP_NAMES[Math.floor(Math.random()*OPP_NAMES.length)],
-    av:OPP_AVS[Math.floor(Math.random()*OPP_AVS.length)],
-    iq:Math.max(800,G.iq+Math.floor((Math.random()-.5)*220)),
-  };
+  G.mode=mode;G.online=false;G.roomId=null;G.oppReady=false;
   const labels={casual:'Casual Trivia',speed:'Speed Round',iqmog:'IQ MOG Mode',ranked:'Ranked'};
   const r=rankFor(G.iq);
   document.getElementById('mm-status').textContent=`Searching for ${labels[mode]} opponent…`;
   document.getElementById('mm-you-rank').innerHTML=rbadge(r);
   document.getElementById('mm-you-iq').textContent=`IQ: ${G.iq}`;
-  document.getElementById('mm-opp-av').textContent=G.opp.av;
+  document.getElementById('mm-opp-av').textContent='❓';
   document.getElementById('mm-opp-name').textContent='Finding…';
   document.getElementById('mm-found').classList.add('hidden');
   document.getElementById('mm-spin').style.display='flex';
   nav('mm');
-  setTimeout(()=>{
-    const or=rankFor(G.opp.iq);
-    document.getElementById('mm-opp-name').textContent=G.opp.name;
-    document.getElementById('mm-opp-rank').innerHTML=rbadge(or);
-    document.getElementById('mm-opp-iq').textContent=`IQ: ${G.opp.iq}`;
-    document.getElementById('mm-status').textContent='Opponent found!';
-    document.getElementById('mm-spin').style.display='none';
-    document.getElementById('mm-found').classList.remove('hidden');
-    setTimeout(()=>showLobby(),1600);
-  },1800+Math.random()*2200);
+
+  if(fbDb){
+    onlineMM(mode);
+  }else{
+    botFallback(mode);
+  }
+}
+
+function onlineMM(mode){
+  const pid=getPlayerId();
+  const qRef=fbDb.ref('queue/'+mode);
+  // check for existing player waiting
+  qRef.once('value',snap=>{
+    let matched=false;
+    snap.forEach(c=>{
+      if(c.key===pid)return;
+      // found someone waiting — join their room
+      matched=true;
+      const host=c.val();
+      const roomId=c.key+'_'+pid;
+      G.roomId=roomId;G.isHost=false;G.online=true;
+      // build room
+      const pool=[...QS[mode]];
+      for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+      const qs=pool.slice(0,10);
+      fbDb.ref('rooms/'+roomId).set({
+        mode:mode,
+        questions:qs,
+        host:{id:c.key,name:host.name,iq:host.iq,av:host.av},
+        guest:{id:pid,name:getPlayerName(),iq:G.iq,av:'😎'},
+        status:'lobby',
+        scores:{host:0,guest:0},
+        answers:{},
+        currentQ:0,
+        createdAt:Date.now()
+      });
+      // remove both from queue
+      c.ref.remove();
+      G.opp={name:host.name,av:host.av,iq:host.iq};
+      showMMFound();
+      return true;
+    });
+    if(!matched){
+      // no one waiting — add ourselves to queue
+      mmQueueRef=qRef.child(pid);
+      mmQueueRef.set({name:getPlayerName(),iq:G.iq,av:'😎',ts:Date.now()});
+      mmQueueRef.onDisconnect().remove();
+      // listen for someone creating a room with us
+      const roomsRef=fbDb.ref('rooms');
+      const roomListener=roomsRef.orderByChild('host/id').equalTo(pid).on('child_added',snap=>{
+        const room=snap.val();
+        if(room.status!=='lobby')return;
+        G.roomId=snap.key;G.isHost=true;G.online=true;
+        roomsRef.off('child_added',roomListener);
+        cleanupMM();
+        G.opp={name:room.guest.name,av:room.guest.av,iq:room.guest.iq};
+        showMMFound();
+      });
+      // timeout → bot fallback after 15s
+      mmTimeout=setTimeout(()=>{
+        roomsRef.off('child_added',roomListener);
+        cleanupMM();
+        botFallback(mode);
+      },15000);
+    }
+  });
+}
+
+function botFallback(mode){
+  G.online=false;G.roomId=null;
+  G.opp={
+    name:OPP_NAMES[Math.floor(Math.random()*OPP_NAMES.length)],
+    av:OPP_AVS[Math.floor(Math.random()*OPP_AVS.length)],
+    iq:Math.max(800,G.iq+Math.floor((Math.random()-.5)*220)),
+  };
+  setTimeout(()=>showMMFound(),1800+Math.random()*2200);
+}
+
+function showMMFound(){
+  const or=rankFor(G.opp.iq);
+  document.getElementById('mm-opp-av').textContent=G.opp.av;
+  document.getElementById('mm-opp-name').textContent=G.opp.name+(G.online?' 🌐':'');
+  document.getElementById('mm-opp-rank').innerHTML=rbadge(or);
+  document.getElementById('mm-opp-iq').textContent=`IQ: ${G.opp.iq}`;
+  document.getElementById('mm-status').textContent=G.online?'Live opponent found!':'Opponent found!';
+  document.getElementById('mm-spin').style.display='none';
+  document.getElementById('mm-found').classList.remove('hidden');
+  setTimeout(()=>showLobby(),1600);
 }
 
 // ══════════════════════════════════════════
@@ -782,9 +863,20 @@ function countdown(){
 // BATTLE
 // ══════════════════════════════════════════
 function startBattle(){
-  const pool=[...QS[G.mode]];
-  for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
-  G.qs=pool.slice(0,10);
+  if(G.online&&G.roomId){
+    // fetch synced questions from room
+    fbDb.ref('rooms/'+G.roomId+'/questions').once('value',snap=>{
+      G.qs=snap.val()||[];
+      initBattle();
+    });
+  }else{
+    const pool=[...QS[G.mode]];
+    for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+    G.qs=pool.slice(0,10);
+    initBattle();
+  }
+}
+function initBattle(){
   G.currentQ=0;G.pScore=0;G.oScore=0;G.pStreak=0;G.oStreak=0;
   G.timeLimit=G.mode==='speed'?8:15;
 
@@ -862,7 +954,27 @@ function nextQ(){
   scheduleOpp();
 }
 
+let onlineOppListener=null;
+
 function scheduleOpp(){
+  if(G.online&&G.roomId){
+    // listen for real opponent's answer
+    const role=G.isHost?'guest':'host';
+    const ansRef=fbDb.ref('rooms/'+G.roomId+'/answers/'+role+'/q'+G.currentQ);
+    onlineOppListener=ansRef.on('value',snap=>{
+      if(snap.val()===null||G.oAnswered)return;
+      G.oAnswered=true;
+      const ok=snap.val().correct;
+      if(ok){G.oScore++;G.oStreak++;}else G.oStreak=0;
+      document.getElementById('b-opp-score').textContent=G.oScore;
+      document.getElementById('opp-ind').style.display='flex';
+      document.getElementById('sp-opp').style.display=G.oStreak>=3?'block':'none';
+      document.getElementById('cam-opp').classList.add('opp-flash');
+      setTimeout(()=>document.getElementById('cam-opp').classList.remove('opp-flash'),420);
+      if(G.answered)setTimeout(()=>advance(),900);
+    });
+    return;
+  }
   const mn=G.mode==='speed'?900:2000,mx=G.mode==='speed'?5500:11000;
   const delay=mn+Math.random()*(mx-mn);
   G.oTimeout=setTimeout(()=>{
@@ -873,7 +985,6 @@ function scheduleOpp(){
       document.getElementById('b-opp-score').textContent=G.oScore;
       document.getElementById('opp-ind').style.display='flex';
       document.getElementById('sp-opp').style.display=G.oStreak>=3?'block':'none';
-      // flash opp cam
       document.getElementById('cam-opp').classList.add('opp-flash');
       setTimeout(()=>document.getElementById('cam-opp').classList.remove('opp-flash'),420);
       if(G.answered)setTimeout(()=>advance(),900);
@@ -895,6 +1006,19 @@ function playerAnswer(idx){
   document.getElementById('b-you-score').textContent=G.pScore;
   document.getElementById('sp-you').style.display=G.pStreak>=3?'block':'none';
 
+  // submit answer to Firebase if online
+  if(G.online&&G.roomId){
+    const role=G.isHost?'host':'guest';
+    fbDb.ref('rooms/'+G.roomId+'/answers/'+role+'/q'+G.currentQ).set({correct:ok,idx:idx,ts:Date.now()});
+    fbDb.ref('rooms/'+G.roomId+'/scores/'+role).set(G.pScore);
+    if(!G.oAnswered){
+      // wait for opponent (listener already running from scheduleOpp)
+    }else{
+      setTimeout(()=>advance(),900);
+    }
+    return;
+  }
+
   if(!G.oAnswered){
     clearTimeout(G.oTimeout);
     setTimeout(()=>{
@@ -914,6 +1038,11 @@ function playerAnswer(idx){
 }
 
 function advance(){
+  if(onlineOppListener&&G.roomId){
+    const role=G.isHost?'guest':'host';
+    fbDb.ref('rooms/'+G.roomId+'/answers/'+role+'/q'+G.currentQ).off('value',onlineOppListener);
+    onlineOppListener=null;
+  }
   G.currentQ++;
   if(G.currentQ<G.qs.length)nextQ();else endBattle();
 }
@@ -923,6 +1052,12 @@ function advance(){
 // ══════════════════════════════════════════
 function endBattle(){
   clearInterval(G.tInterval);clearTimeout(G.oTimeout);
+  if(onlineOppListener){onlineOppListener=null;}
+  if(G.online&&G.roomId){
+    fbDb.ref('rooms/'+G.roomId+'/status').set('done');
+    setTimeout(()=>fbDb.ref('rooms/'+G.roomId).remove(),10000);
+    G.online=false;G.roomId=null;
+  }
   stopWebcam();
   const won=G.pScore>G.oScore,tied=G.pScore===G.oScore;
   const oldIQ=G.iq,oldRank=rankFor(G.iq);

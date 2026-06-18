@@ -152,36 +152,33 @@ body.theme-light::before{background:radial-gradient(ellipse 70% 50% at 15% 15%,r
 .timer-wrap{height:6px;background:var(--surface2);flex-shrink:0}
 .timer-fill{height:100%;background:linear-gradient(90deg,#b00000,#ef4444);transition:width .1s linear;box-shadow:0 0 8px rgba(180,0,0,.6)}
 
-/* Question header — top of screen */
-.battle-top{padding:18px 20px 14px;border-bottom:2px solid var(--border);flex-shrink:0}
-.q-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.q-num{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
-.timer-display{font-size:2.5rem;font-family:'Bebas Neue',sans-serif;font-weight:400;color:var(--purple-light);line-height:1;letter-spacing:.05em}
-.timer-display.urgent{color:var(--red);animation:tUrgent .45s ease infinite alternate}
-@keyframes tUrgent{from{transform:scale(1)}to{transform:scale(1.12)}}
-.opp-indicator{display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--muted);display:none;margin-bottom:6px}
-.opp-dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
-.q-text{font-size:1.45rem;font-family:'Rajdhani',sans-serif;font-weight:700;line-height:1.4;color:var(--text)}
-
-/* Bottom row — cams left, answers right */
-.battle-bottom{flex:1;display:grid;grid-template-columns:1fr 1fr;min-height:0}
-.cams-col{display:flex;flex-direction:column;border-right:2px solid var(--border)}
-.cam{position:relative;overflow:hidden;background:var(--surface);flex:1}
-.cam:first-child{border-bottom:2px solid var(--border);box-shadow:inset 0 0 40px rgba(180,0,0,.1)}
+/* Cams — top, side by side, big */
+.cams-row{display:grid;grid-template-columns:1fr 1fr;height:38vh;border-bottom:2px solid var(--border);flex-shrink:0}
+.cam{position:relative;overflow:hidden;background:var(--surface)}
+.cam:first-child{border-right:2px solid var(--border);box-shadow:inset 0 0 40px rgba(180,0,0,.1)}
 .cam:last-child{box-shadow:inset 0 0 40px rgba(220,20,20,.07)}
 video.cam-video{width:100%;height:100%;object-fit:cover;display:none}
-.cam-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:4rem;background:linear-gradient(135deg,var(--surface),var(--surface2))}
-.cam-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(8,0,0,.95));padding:10px 12px 8px;display:flex;align-items:flex-end;justify-content:space-between}
-.cam-name{font-size:.85rem;font-weight:800;letter-spacing:.02em}
-.cam-score{font-size:1.8rem;font-weight:900;line-height:1}
-.rank-pin{position:absolute;top:8px;left:8px;padding:4px 8px;border-radius:8px;font-size:.68rem;font-weight:800;letter-spacing:.04em}
-.streak-pin{position:absolute;top:8px;right:8px;background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:4px 8px;border-radius:8px;font-size:.72rem;font-weight:900;animation:sPulse .55s ease infinite alternate;display:none}
+.cam-ph{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:5.5rem;background:linear-gradient(135deg,var(--surface),var(--surface2))}
+.cam-overlay{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(8,0,0,.95));padding:12px 14px 10px;display:flex;align-items:flex-end;justify-content:space-between}
+.cam-name{font-size:1rem;font-weight:800;letter-spacing:.02em}
+.cam-score{font-size:2.2rem;font-weight:900;line-height:1}
+.rank-pin{position:absolute;top:10px;left:10px;padding:5px 10px;border-radius:8px;font-size:.72rem;font-weight:800;letter-spacing:.04em}
+.streak-pin{position:absolute;top:10px;right:10px;background:linear-gradient(135deg,#f59e0b,#ef4444);color:#fff;padding:5px 10px;border-radius:8px;font-size:.78rem;font-weight:900;animation:sPulse .55s ease infinite alternate;display:none}
 @keyframes sPulse{from{transform:scale(1)}to{transform:scale(1.06);box-shadow:0 0 12px rgba(245,158,11,.6)}}
 .opp-flash{animation:flash .4s ease}
 @keyframes flash{0%,100%{opacity:1}50%{opacity:.3}}
 
-.answers-col{padding:18px 16px;display:flex;flex-direction:column;justify-content:center;gap:11px}
-.answers{display:flex;flex-direction:column;gap:11px}
+/* Question + answers below cams */
+.battle-body{flex:1;padding:16px 20px;display:flex;flex-direction:column;gap:12px;overflow-y:auto}
+.q-header{display:flex;align-items:center;justify-content:space-between}
+.q-num{font-size:.72rem;color:var(--muted);text-transform:uppercase;letter-spacing:.1em}
+.timer-display{font-size:2.5rem;font-family:'Bebas Neue',sans-serif;font-weight:400;color:var(--purple-light);line-height:1;letter-spacing:.05em}
+.timer-display.urgent{color:var(--red);animation:tUrgent .45s ease infinite alternate}
+@keyframes tUrgent{from{transform:scale(1)}to{transform:scale(1.12)}}
+.opp-indicator{display:flex;align-items:center;gap:7px;font-size:.82rem;color:var(--muted);display:none}
+.opp-dot{width:7px;height:7px;border-radius:50%;background:var(--gold)}
+.q-text{font-size:1.4rem;font-family:'Rajdhani',sans-serif;font-weight:700;line-height:1.4;color:var(--text)}
+.answers{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:auto}
 .ans-btn{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;padding:16px 14px;color:var(--text);font-size:.95rem;font-weight:700;cursor:pointer;transition:all .15s;text-align:left;line-height:1.35;font-family:inherit}
 .ans-btn:hover:not(:disabled){border-color:#ef4444;background:rgba(180,0,0,.12)}
 .ans-btn.correct{border-color:var(--green)!important;background:rgba(16,185,129,.14)!important;color:#6ee7b7}
@@ -458,8 +455,31 @@ h1{font-size:1.4rem;font-weight:900}
 <div id="screen-battle" class="screen">
   <div class="timer-wrap"><div class="timer-fill" id="t-bar" style="width:100%"></div></div>
 
-  <!-- Question on top -->
-  <div class="battle-top">
+  <!-- Cams on top — big side by side -->
+  <div class="cams-row">
+    <div class="cam" id="cam-you">
+      <video class="cam-video" id="webcam" autoplay muted playsinline></video>
+      <div class="cam-ph" id="ph-you">😎</div>
+      <div class="rank-pin" id="rpin-you"></div>
+      <div class="streak-pin" id="sp-you">🔥 ON FIRE</div>
+      <div class="cam-overlay">
+        <div class="cam-name">You</div>
+        <div class="cam-score" id="b-you-score">0</div>
+      </div>
+    </div>
+    <div class="cam" id="cam-opp">
+      <div class="cam-ph" id="ph-opp">🤖</div>
+      <div class="rank-pin" id="rpin-opp"></div>
+      <div class="streak-pin" id="sp-opp">🔥 ON FIRE</div>
+      <div class="cam-overlay">
+        <div class="cam-name" id="b-opp-name">Opponent</div>
+        <div class="cam-score" id="b-opp-score">0</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Question then answers below -->
+  <div class="battle-body">
     <div class="q-header">
       <div class="q-num" id="q-num">Question 1 of 10</div>
       <div class="timer-display" id="t-display">15</div>
@@ -469,36 +489,7 @@ h1{font-size:1.4rem;font-weight:900}
       <span id="opp-ind-name">Opponent</span> has answered
     </div>
     <div class="q-text" id="q-text">Loading…</div>
-  </div>
-
-  <!-- Cams left, answers right -->
-  <div class="battle-bottom">
-    <div class="cams-col">
-      <!-- YOU -->
-      <div class="cam" id="cam-you">
-        <video class="cam-video" id="webcam" autoplay muted playsinline></video>
-        <div class="cam-ph" id="ph-you">😎</div>
-        <div class="rank-pin" id="rpin-you"></div>
-        <div class="streak-pin" id="sp-you">🔥 ON FIRE</div>
-        <div class="cam-overlay">
-          <div class="cam-name">You</div>
-          <div class="cam-score" id="b-you-score">0</div>
-        </div>
-      </div>
-      <!-- OPP -->
-      <div class="cam" id="cam-opp">
-        <div class="cam-ph" id="ph-opp">🤖</div>
-        <div class="rank-pin" id="rpin-opp"></div>
-        <div class="streak-pin" id="sp-opp">🔥 ON FIRE</div>
-        <div class="cam-overlay">
-          <div class="cam-name" id="b-opp-name">Opponent</div>
-          <div class="cam-score" id="b-opp-score">0</div>
-        </div>
-      </div>
-    </div>
-    <div class="answers-col">
-      <div class="answers" id="answers"></div>
-    </div>
+    <div class="answers" id="answers"></div>
   </div>
 </div>
 
